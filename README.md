@@ -1,102 +1,163 @@
-# Data Warehouse and Analytics Project
+# 🏗️ Data Warehouse & Analytics Project
 
-Welcome to the **Data Warehouse and Analytics Project** repository! 🚀  
-This project demonstrates a comprehensive data warehousing and analytics solution, from building a data warehouse to generating actionable insights. Designed as a portfolio project, it highlights industry best practices in data engineering and analytics.
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![DBeaver](https://img.shields.io/badge/DBeaver-382923?style=for-the-badge&logo=dbeaver&logoColor=white)](https://dbeaver.io/)
+[![Draw.io](https://img.shields.io/badge/Draw.io-F08705?style=for-the-badge&logo=diagrams.net&logoColor=white)](https://www.drawio.com/)
+
+This project builds a modern **Data Warehouse** using **PostgreSQL** with a **Medallion Architecture (Bronze → Silver → Gold)**. Data from two source systems (CRM & ERP) is consolidated into a single **Star Schema** analytical model, ready for reporting and business intelligence.
 
 ---
-## 🏗️ Data Architecture
 
-The data architecture for this project follows Medallion Architecture **Bronze**, **Silver**, and **Gold** layers:
+## 📖 Table of Contents
+
+1. [Data Architecture](#-data-architecture)
+2. [Data Flow](#-data-flow)
+3. [Data Integration](#-data-integration)
+4. [Data Modelling](#-data-modelling)
+5. [Repository Structure](#-repository-structure)
+6. [Getting Started](#-getting-started)
+7. [Tools Used](#%EF%B8%8F-tools-used)
+
+---
+
+## 🏛️ Data Architecture
+
 ![Data Architecture](docs/data_architecture.png)
 
-1. **Bronze Layer**: Stores raw data as-is from the source systems. Data is ingested from CSV Files into SQL Server Database.
-2. **Silver Layer**: This layer includes data cleansing, standardization, and normalization processes to prepare data for analysis.
-3. **Gold Layer**: Houses business-ready data modeled into a star schema required for reporting and analytics.
+This project follows the **Medallion Architecture** consisting of 3 layers:
 
----
-## 📖 Project Overview
-
-This project involves:
-
-1. **Data Architecture**: Designing a Modern Data Warehouse Using Medallion Architecture **Bronze**, **Silver**, and **Gold** layers.
-2. **ETL Pipelines**: Extracting, transforming, and loading data from source systems into the warehouse.
-3. **Data Modeling**: Developing fact and dimension tables optimized for analytical queries.
-4. **Analytics & Reporting**: Creating SQL-based reports and dashboards for actionable insights.
-
-🎯 This repository is an excellent resource for professionals and students looking to showcase expertise in:
-- SQL Development
-- Data Architect
-- Data Engineering  
-- ETL Pipeline Developer  
-- Data Modeling  
-- Data Analytics  
+| Layer | Object Type | Description |
+|-------|------------|-------------|
+| **🥉 Bronze** | Tables | Stores raw data **as-is** from source systems. Data is ingested from CSV files using stored procedures with a **Truncate & Insert** strategy. |
+| **🥈 Silver** | Tables | Data cleansing layer: **cleansing**, **standardization**, **normalization**, and **derived columns**. Loaded via stored procedures with **Truncate & Insert**. |
+| **🥇 Gold** | Views | Business-ready data modeled as a **Star Schema**. This layer integrates data from multiple sources, applies business logic, and serves reporting & analytics needs. |
 
 ---
 
-## 🛠️ Important Links & Tools:
+## 🔄 Data Flow
 
-Everything is for Free!
-- **[Datasets](datasets/):** Access to the project dataset (csv files).
-- **[PostgreSQL](https://www.microsoft.com/en-us/sql-server/sql-server-downloads):** Lightweight server for hosting your SQL database.
-- **[DBeaver](https://learn.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms?view=sql-server-ver16):** GUI for managing and interacting with databases.
-- **[Git Repository](https://github.com/):** Set up a GitHub account and repository to manage, version, and collaborate on your code efficiently.
-- **[DrawIO](https://www.drawio.com/):** Design data architecture, models, flows, and diagrams.
-- **[Notion](https://www.notion.com/templates/sql-data-warehouse-project):** Get the Project Template from Notion
-- **[Notion Project Steps](https://thankful-pangolin-2ca.notion.site/SQL-Data-Warehouse-Project-16ed041640ef80489667cfe2f380b269?pvs=4):** Access to All Project Phases and Tasks.
+![Data Flow](docs/data_flow.png)
 
----
+Data flows from source to destination as follows:
 
-## 🚀 Project Requirements
+- **CRM** → 3 tables: `crm_sales_details`, `crm_cust_info`, `crm_prd_info`
+- **ERP** → 3 tables: `erp_cust_az12`, `erp_loc_a101`, `erp_px_cat_g1v2`
 
-### Building the Data Warehouse (Data Engineering)
-
-#### Objective
-Develop a modern data warehouse using SQL Server to consolidate sales data, enabling analytical reporting and informed decision-making.
-
-#### Specifications
-- **Data Sources**: Import data from two source systems (ERP and CRM) provided as CSV files.
-- **Data Quality**: Cleanse and resolve data quality issues prior to analysis.
-- **Integration**: Combine both sources into a single, user-friendly data model designed for analytical queries.
-- **Scope**: Focus on the latest dataset only; historization of data is not required.
-- **Documentation**: Provide clear documentation of the data model to support both business stakeholders and analytics teams.
+Each table passes through the **Bronze → Silver → Gold** pipeline, where in the Gold layer data is combined into:
+- `fact_sales` — Fact table for sales transactions
+- `dim_customers` — Customer dimension
+- `dim_products` — Product dimension
 
 ---
 
-### BI: Analytics & Reporting (Data Analysis)
+## 🔗 Data Integration
 
-#### Objective
-Develop SQL-based analytics to deliver detailed insights into:
-- **Customer Behavior**
-- **Product Performance**
-- **Sales Trends**
+![Data Integration](docs/data_integration.png)
 
-These insights empower stakeholders with key business metrics, enabling strategic decision-making.  
+The integration model shows how tables from CRM and ERP are connected:
 
-For more details, refer to [docs/requirements.md](docs/requirements.md).
+- **Sales ↔ Product**: `crm_sales_details.sls_prd_key` → `crm_prd_info.prd_key`
+- **Sales ↔ Customer**: `crm_sales_details.sls_cust_id` → `crm_cust_info.cst_id`
+- **Product ↔ Category**: `crm_prd_info.cat_id` → `erp_px_cat_g1v2.id`
+- **Customer ↔ Demographics**: `crm_cust_info.cst_key` → `erp_cust_az12.cid`
+- **Customer ↔ Location**: `crm_cust_info.cst_key` → `erp_loc_a101.cid`
+
+---
+
+## ⭐ Data Modelling
+
+![Data Modelling — Star Schema](docs/data_modelling.png)
+
+The Gold layer is modeled using a **Star Schema** consisting of:
+
+### `gold.dim_customers`
+Customer dimension enriched with demographic and geographic data from CRM + ERP.
+
+### `gold.dim_products`
+Product dimension including category, subcategory, product line, and cost information.
+
+### `gold.fact_sales`
+Fact table storing transactional sales data: order, shipping, due date, quantity, price, and sales amount. Formula: **Sales = Quantity × Price**.
+
+> 📄 For detailed column descriptions, see the [Data Catalog](docs/data_catalog.md).
+
+---
 
 ## 📂 Repository Structure
+
 ```
 data-warehouse-project/
 │
-├── datasets/                           # Raw datasets used for the project (ERP and CRM data)
+├── datasets/                           # Raw datasets (CSV) from source systems
+│   ├── source_crm/                     # CRM data (cust_info, prd_info, sales_details)
+│   └── source_erp/                     # ERP data (CUST_AZ12, LOC_A101, PX_CAT_G1V2)
 │
-├── docs/                               # Project documentation and architecture details
-│   ├── etl.drawio                      # Draw.io file shows all different techniquies and methods of ETL
-│   ├── data_architecture.drawio        # Draw.io file shows the project's architecture
-│   ├── data_catalog.md                 # Catalog of datasets, including field descriptions and metadata
-│   ├── data_flow.drawio                # Draw.io file for the data flow diagram
-│   ├── data_models.drawio              # Draw.io file for data models (star schema)
-│   ├── naming-conventions.md           # Consistent naming guidelines for tables, columns, and files
+├── docs/                               # Project documentation & diagrams
+│   ├── data_architecture.png           # High-level architecture diagram
+│   ├── data_flow.png                   # Data flow diagram across layers
+│   ├── data_integration.png            # CRM & ERP table integration diagram
+│   ├── data_modelling.png              # Star Schema diagram (Gold layer)
+│   ├── data_catalog.md                 # Column descriptions & metadata for Gold layer
+│   └── naming_conventions.md           # Naming guidelines for tables, columns, and procedures
 │
-├── scripts/                            # SQL scripts for ETL and transformations
-│   ├── bronze/                         # Scripts for extracting and loading raw data
-│   ├── silver/                         # Scripts for cleaning and transforming data
-│   ├── gold/                           # Scripts for creating analytical models
+├── scripts/                            # SQL scripts for ETL & transformations
+│   ├── init_server.sql                 # Database initialization
+│   ├── init_databases.sql              # Schema creation (bronze, silver, gold)
+│   ├── bronze/
+│   │   ├── ddl_bronze.sql              # DDL for Bronze tables
+│   │   └── proc_load_bronze.sql        # Stored procedure to load data into Bronze
+│   ├── silver/
+│   │   ├── ddl_silver.sql              # DDL for Silver tables
+│   │   └── proc_load_silver.sql        # Stored procedure to load data into Silver
+│   └── gold/
+│       └── ddl_gold.sql                # DDL for Gold views (Star Schema)
 │
-├── tests/                              # Test scripts and quality files
+├── tests/                              # Quality check scripts
+│   ├── quality_check_silver.sql        # Silver layer data validation
+│   └── quality_check_gold.sql          # Gold layer data validation
 │
-├── README.md                           # Project overview and instructions
-├── LICENSE                             # License information for the repository
-├── .gitignore                          # Files and directories to be ignored by Git
-└── requirements.txt                    # Dependencies and requirements for the project
+├── .gitignore                          # Files/folders ignored by Git
+└── README.md                           # Project documentation (this file)
 ```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **PostgreSQL** installed and running
+- **DBeaver** (or any SQL client) to execute the scripts
+
+### Step-by-Step Execution
+
+```
+1️⃣  Create database       →  Run scripts/init_server.sql
+2️⃣  Create schemas         →  Run scripts/init_databases.sql
+3️⃣  Create Bronze tables   →  Run scripts/bronze/ddl_bronze.sql
+4️⃣  Load Bronze data       →  Run scripts/bronze/proc_load_bronze.sql
+5️⃣  Create Silver tables   →  Run scripts/silver/ddl_silver.sql
+6️⃣  Load Silver data       →  Run scripts/silver/proc_load_silver.sql
+7️⃣  Create Gold views      →  Run scripts/gold/ddl_gold.sql
+8️⃣  Run quality checks     →  Run tests/quality_check_silver.sql
+                               Run tests/quality_check_gold.sql
+```
+
+> **Note:** Execute scripts in order, as each layer depends on the previous one.
+
+---
+
+## 🛠️ Tools Used
+
+| Tool | Purpose |
+|------|---------|
+| **[PostgreSQL](https://www.postgresql.org/)** | Database engine for storing and managing the data warehouse |
+| **[DBeaver](https://dbeaver.io/)** | GUI database client for running queries and managing databases |
+| **[Draw.io](https://www.drawio.com/)** | Designing architecture, data flow, and data model diagrams |
+| **[Git & GitHub](https://github.com/)** | Version control and code collaboration |
+
+---
+
+## 📚 Additional Documentation
+
+- [Data Catalog](docs/data_catalog.md) — Detailed description of every column in the Gold layer
+- [Naming Conventions](docs/naming_conventions.md) — Naming guidelines for tables, columns, and stored procedures
